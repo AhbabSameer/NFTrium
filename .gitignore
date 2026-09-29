@@ -23,3 +23,14 @@ dist-ssr
 *.sln
 *.sw?
 .env
+scripts/seed/.uploads.json
+
+# Claude Code (local settings)
+.claude/
+
+# Foundry (contracts/)
+contracts/cache/
+contracts/out/
+contracts/broadcast/*/31337/
+contracts/broadcast/**/dry-run/
+contracts/.env

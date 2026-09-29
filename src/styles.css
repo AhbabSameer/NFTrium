@@ -1,0 +1,284 @@
+@import 'tailwindcss';
+@import '@fontsource/instrument-serif/400.css';
+@import '@fontsource/instrument-serif/400-italic.css';
+@import '@fontsource-variable/geist';
+@import '@fontsource-variable/geist-mono';
+
+/* ─── NFTrium design tokens ─────────────────────────────────────────────── */
+
+@theme {
+  /* Cyanotype: ink-dark room, cool paper, and one luminous Prussian blue. */
+  --color-ink: #030406;
+  --color-ink-2: #0a0c11;
+  --color-ink-3: #12151c;
+  --color-line: rgb(222 230 242 / 0.12);
+  --color-line-strong: rgb(222 230 242 / 0.28);
+  --color-paper: #e7ebf1;
+  --color-dim: #9aa4b4; /* 7.6:1 on ink */
+  --color-faint: #5d6678; /* decorative only */
+  --color-accent: #4d8dff; /* 6.2:1 on ink */
+  --color-accent-deep: #0e2a5e;
+  --color-error: #ff7a6b; /* errors only; 7.9:1 on ink */
+
+  --font-display: 'Instrument Serif', 'Times New Roman', serif;
+  --font-sans: 'Geist Variable', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'Geist Mono Variable', ui-monospace, 'SF Mono', monospace;
+
+  /* Fluid display scale: 360px → 1600px viewports */
+  --text-display-xl: clamp(3.5rem, 1.6rem + 9.2vw, 12.5rem);
+  --text-display-lg: clamp(2.75rem, 1.6rem + 5.2vw, 7.5rem);
+  --text-display-md: clamp(2.25rem, 1.6rem + 2.9vw, 4.5rem);
+  --text-display-sm: clamp(1.75rem, 1.4rem + 1.4vw, 2.75rem);
+
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-develop: cubic-bezier(0.65, 0, 0.35, 1);
+
+  --animate-grain: grain 0.9s steps(6) infinite;
+  --animate-pulse-light: pulse-light 4s ease-in-out infinite;
+
+  @keyframes grain {
+    0% { transform: translate(0, 0); }
+    20% { transform: translate(-3%, 2%); }
+    40% { transform: translate(2%, -3%); }
+    60% { transform: translate(-2%, -1%); }
+    80% { transform: translate(3%, 3%); }
+    100% { transform: translate(0, 0); }
+  }
+
+  @keyframes pulse-light {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.45; }
+  }
+}
+
+/* Keyframes used directly by name (inline styles / arbitrary values). They live outside @theme,
+   because Tailwind drops theme keyframes that no --animate-* variable references. */
+@keyframes fade-in {
+  from { opacity: 0; }
+}
+
+/* The hero's NFT wall columns glide upward, escalator-style (NftWall.tsx). */
+@keyframes wall-up {
+  from { transform: translate3d(0, 0, 0); }
+  to { transform: translate3d(0, -50%, 0); }
+}
+@keyframes wall-down {
+  from { transform: translate3d(0, -50%, 0); }
+  to { transform: translate3d(0, 0, 0); }
+}
+
+/* ─── Base ───────────────────────────────────────────────────────────────── */
+
+@layer base {
+  html {
+    color-scheme: dark;
+    background: var(--color-ink);
+    color: var(--color-paper);
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    min-height: 100dvh;
+    font-family: var(--font-sans);
+    font-feature-settings: 'ss01', 'cv11';
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  ::selection {
+    background: var(--color-accent);
+    color: var(--color-ink);
+  }
+
+  :focus-visible {
+    outline: 1.5px solid var(--color-accent);
+    outline-offset: 4px;
+  }
+
+  h1, h2, h3 {
+    text-wrap: balance;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  /* Lenis owns scrolling when motion is allowed. */
+  html.lenis, html.lenis body { height: auto; }
+  .lenis.lenis-smooth { scroll-behavior: auto !important; }
+  .lenis.lenis-stopped { overflow: hidden; }
+}
+
+/* ─── Atmosphere: grain + vignette over everything, never interactive ───── */
+
+@layer components {
+  .grain {
+    pointer-events: none;
+    position: fixed;
+    inset: -50%;
+    z-index: 60;
+    opacity: 0.09;
+    mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 1.4 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    animation: var(--animate-grain);
+  }
+
+  .vignette {
+    pointer-events: none;
+    position: fixed;
+    inset: 0;
+    z-index: 59;
+    background:
+      radial-gradient(120% 80% at 50% -10%, rgb(77 141 255 / 0.07), transparent 55%),
+      radial-gradient(140% 100% at 50% 50%, transparent 65%, rgb(0 0 0 / 0.3));
+  }
+
+  /* ─── The develop effect ───────────────────────────────────────────────
+     A print starts as a soft Prussian-blue cyanotype and develops into full
+     colour once the image has loaded and scrolled into view. */
+  .develop {
+    filter: grayscale(1) sepia(1) hue-rotate(180deg) saturate(2.4) brightness(0.62) contrast(1.15) blur(6px);
+    opacity: 0.55;
+    transform: scale(1.04);
+    transition:
+      filter 1.8s var(--ease-develop),
+      opacity 1.2s var(--ease-develop),
+      transform 2.4s var(--ease-out-expo);
+  }
+
+  .develop[data-developed='true'] {
+    filter: none;
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  /* Film-edge caption: the mono strip under every print. */
+  .edge {
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    line-height: 1;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .label {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--color-dim);
+  }
+
+  .display {
+    font-family: var(--font-display);
+    font-weight: 400;
+    line-height: 0.92;
+    letter-spacing: -0.02em;
+  }
+
+}
+
+/* ─── Controls ───────────────────────────────────────────────────────────── */
+
+@utility btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  min-height: 2.75rem;
+  padding: 0 1.25rem;
+  border: 1px solid var(--color-line-strong);
+  border-radius: 999px;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  transition:
+    border-color 250ms var(--ease-out-expo),
+    background-color 250ms var(--ease-out-expo),
+    color 250ms var(--ease-out-expo);
+  &:hover:not(:disabled) {
+    border-color: var(--color-paper);
+  }
+  &:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+  }
+  &[aria-selected='true'],
+  &[aria-pressed='true'] {
+    background: var(--color-paper);
+    border-color: var(--color-paper);
+    color: var(--color-ink);
+  }
+}
+
+@utility btn-primary {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  color: var(--color-ink);
+  font-weight: 600;
+  &:hover:not(:disabled) {
+    background: var(--color-paper);
+    border-color: var(--color-paper);
+  }
+}
+
+@utility field {
+  width: 100%;
+  min-height: 2.75rem;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--color-line-strong);
+  padding: 0.5rem 0;
+  font-family: var(--font-mono);
+  font-size: 1rem;
+  color: var(--color-paper);
+  transition: border-color 250ms var(--ease-out-expo);
+  &::placeholder {
+    color: var(--color-faint);
+  }
+  &:focus {
+    border-color: var(--color-accent);
+    outline: none;
+  }
+}
+
+/* ─── Page transitions (View Transitions API) ───────────────────────────── */
+
+::view-transition-old(root) {
+  animation: 420ms var(--ease-develop) both vt-fade-out;
+}
+::view-transition-new(root) {
+  animation: 620ms var(--ease-out-expo) 120ms both vt-develop-in;
+}
+::view-transition-group(*) {
+  animation-duration: 700ms;
+  animation-timing-function: var(--ease-out-expo);
+}
+
+@keyframes vt-fade-out {
+  to { opacity: 0; filter: blur(4px); }
+}
+@keyframes vt-develop-in {
+  from { opacity: 0; filter: grayscale(1) sepia(1) hue-rotate(180deg) saturate(2.4) blur(6px); }
+}
+
+/* ─── Reduced motion: everything still works, nothing moves ─────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  .grain { animation: none; }
+  .develop { filter: none; opacity: 1; transform: none; }
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+}

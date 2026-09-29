@@ -1,186 +1,112 @@
-# NFT Marketplace Platform
+# NFTrium
 
-## Overview
-The NFT Marketplace Platform is a comprehensive decentralized application (dApp) built on the Ethereum blockchain that enables users to create, buy, sell, and auction non-fungible tokens (NFTs). The platform provides a modern, responsive user interface with advanced marketplace functionality, supporting both fixed-price sales and auction mechanisms.
+A marketplace for image NFTs on the Ethereum **Sepolia testnet**. Mint an image as an NFT, sell it at a fixed price
+or in a timed auction, and earn a royalty every time it resells.
 
----
+- **Browse without a wallet.** Listings, auctions and history are read from a public Sepolia RPC.
+- **Fixed-price sales and English auctions.** Each bid must beat the last by 5%, and a bid in the final 10 minutes
+  extends the auction by 10 minutes.
+- **Escrow.** A listed NFT is held by the marketplace contract, so it can't change hands behind a buyer's back.
+- **Creator royalties** of up to 5% via ERC-2981, paid on every sale through the marketplace.
+- **Pull payments.** Sellers, creators, the platform and outbid bidders are credited and withdraw when they like.
 
-## System Architecture
+## Deployed contracts (Sepolia)
 
-### Frontend Architecture
-The frontend is built with React 18 using functional components and hooks. It uses React Router for client-side navigation and Tailwind CSS with custom components for styling. State management is handled with React hooks (`useState`, `useEffect`, `useCallback`, `useMemo`). Blockchain interaction is powered by Ethers.js, while IPFS via Pinata is used for decentralized metadata and image storage.
+| Contract | Address |
+| --- | --- |
+| `ImageNFT` | [`0xF4eBc0433626433A15D51Ba3A7Ab4b05CAFfC79C`](https://sepolia.etherscan.io/address/0xF4eBc0433626433A15D51Ba3A7Ab4b05CAFfC79C) |
+| `NFTMarketplace` | [`0x338992Aa1eA01A0E02B7411245A8fE4eE1307d53`](https://sepolia.etherscan.io/address/0x338992Aa1eA01A0E02B7411245A8fE4eE1307d53) |
 
-### Smart Contract Architecture
-The platform consists of two main smart contracts:
+The marketplace is seeded with 31 NFTs: 13 for sale, 11 in auction and 7 held by the creator.
 
-#### ImageNFT Contract (ERC-721 Token Contract)
-**Location:** `ImageNFT.sol`  
-**Purpose:** Manages NFT creation, minting, and royalty tracking.
+## Getting started
 
-**Key Features:**  
-The contract is ERC-721 compliant with URI storage extension, has a built-in royalty system (0–5% maximum), integrates with the marketplace for creation tracking, supports owner-controlled marketplace address updates, and implements reentrancy protection for secure minting.  
+Requires **Node 26** (see `.nvmrc`) and, for the contracts, [Foundry](https://getfoundry.sh).
 
-**Core Functions:**  
-- `mintNft(string memory _tokenURI, uint256 royaltyBps) external nonReentrant`  
-- `getRoyalties(uint256 tokenId) external view returns (address creator, uint256 bps)`  
-- `setMarketPlace(address _marketplaceContract) external onlyOwner`  
+```sh
+nvm use                # Node 26
+npm install
+cp .env.example .env   # or create .env by hand, see below
+npm run dev
+```
 
-**Contract Constants:**  
-- `MAX_ROYALTY_BPS`: 500 (5% maximum royalty)  
-- Token Symbol: `IMGNFT`  
-- Token Name: `ImageNFT`  
+Browsing works with no configuration. **Minting** uploads images to IPFS through [Pinata](https://pinata.cloud), so
+it needs a Pinata JWT in `.env`:
 
-#### NFTMarketplace Contract
-**Location:** `NFTMarketplace.sol`  
-**Purpose:** Handles all marketplace operations including listings, auctions, and transactions.
+```sh
+VITE_PINATA_JWT=your-pinata-jwt
+```
 
-**Key Features:**  
-The contract supports fixed-price listings, direct purchase functionality, a time-based auction system with a bidding mechanism, automatic royalty distribution to creators, and platform fee collection (10%). It implements efficient array management, user activity tracking, and secure transaction flows.  
+The `VITE_` prefix means the key is bundled into the browser code. That's a deliberate trade-off for a testnet
+project: anyone could use the key, including to unpin files. Use a key scoped to uploads only if that matters to you.
 
-**Core Constants:**  
-- `FEE_PERCENT`: 10 (10% platform fee)  
-- `BID_INCREMENT`: 0.01 ETH  
-- `MAX_AUCTION_DURATION`: 30 days  
-- `MIN_AUCTION_DURATION`: 1 hour  
+To buy, bid or mint you need a browser wallet (e.g. MetaMask) on Sepolia with some Sepolia ETH.
 
-**Blockchain Integration:**  
-The system is compatible with Ethereum mainnet/testnet, uses ERC-721 with royalty extensions, implements `ReentrancyGuard` protection, and ensures gas optimization through efficient array management and batch operations.
+### Optional environment variables
 
----
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `VITE_SEPOLIA_RPC_URL` | public RPCs | Your own Sepolia RPC, tried first |
+| `VITE_IPFS_GATEWAY` | the project's Pinata gateway | IPFS gateway for metadata and images |
 
-## Core Features
+## Scripts
 
-### NFT Creation & Minting
-The platform supports image uploads (JPEG, PNG, GIF, WebP, SVG formats, max 10MB), structured metadata storage on IPFS via Pinata, configurable creator royalties (0–5%), automatic registration with the marketplace contract, and on-chain token URI storage integrated with IPFS.
+| Command | What it does |
+| --- | --- |
+| `npm run dev` | Start the dev server |
+| `npm run build` | Typecheck and build for production into `dist/` |
+| `npm run preview` | Serve the production build locally |
+| `npm run typecheck` | TypeScript only |
+| `npm run lint` | Lint with Oxlint |
+| `npm run codegen` | Rebuild the contracts and regenerate typed ABIs into `src/lib/contracts/generated.ts` |
 
-### Marketplace Operations
-**Fixed Price Listings:** Direct buy/sell with immediate transfers, automatic fee and royalty distribution, optimized listing management, and cancel listing functionality.  
-**Auction System:** Time-based auctions (1 hour to 30 days), minimum bid increment (0.01 ETH), bid refund system via withdrawable balances, reserve price functionality, auction cancellation if no bids, and automatic finalization after auction end.  
-**Advanced Search & Filtering:** Multi-criteria filtering (price range, status, search terms), real-time marketplace data synchronization, multiple view modes (grid, list, mosaic), and pagination with configurable items per page.
+## Tech stack
 
-### User Management
-The platform integrates with MetaMask and other Web3 wallets. It supports portfolio tracking for created and purchased NFTs, withdrawable balances for auction refunds, transaction history logging via events, and efficient user activity tracking.
+- **App:** React 19, React Router 8, TypeScript 7, Vite 8, Tailwind CSS 4
+- **Web3:** wagmi 3, viem 2, TanStack Query; ABIs generated from the Foundry build with `@wagmi/cli`
+- **Motion:** GSAP (ScrollTrigger, SplitText, Flip) with Lenis smooth scrolling, and anime.js for the "How it works"
+  story
+- **Contracts:** Solidity 0.8.30, OpenZeppelin 5.4, Foundry
+- **Storage:** IPFS via Pinata
+- **Tooling:** Oxlint
 
----
+Everything respects `prefers-reduced-motion`: the site stays fully usable with animations off.
 
-## Smart Contract Implementation Details
+## Project structure
 
-### ImageNFT Contract Structure
-**State Variables:**  
-- `uint256 public nextTokenId` (auto-incrementing token counter)  
-- `uint256 public constant MAX_ROYALTY_BPS = 500` (5% max royalty)  
-- `address public marketplaceContract` (marketplace integration)  
-- `mapping(uint256 => address) public creators` (token creator tracking)  
-- `mapping(uint256 => uint256) public royalties` (token royalty rates)  
+```
+contracts/            Foundry project: ImageNFT + NFTMarketplace, tests, deploy and seed scripts
+scripts/seed/         Uploads the sample collection to IPFS and writes the seed manifest
+src/
+  pages/              Home, Explore, Token, Create, Profile, 404 and error pages
+  components/         Cards, token actions, hero wall, starfield, "How it works" story, layout
+  lib/                Contract reads/writes, transactions, IPFS, errors, formatting
+    contracts/        Addresses and generated ABIs
+  motion/             GSAP setup, smooth scroll, text reveals
+  styles.css          Design tokens and global styles
+```
 
-**Security Features:**  
-Reentrancy protection with `nonReentrant`, `Ownable` access control for marketplace updates, URI length and royalty bounds validation, and proper interface integration with the marketplace contract.
+## Contracts
 
-### NFTMarketplace Contract Structure
-**Core Data Structures:**  
-- `Listing`: Stores seller, price, auction status, and activity status.  
-- `Auction`: Stores end time, highest bidder, highest bid, reserved price, finalization, and cancellation status.  
+See [`contracts/README.md`](contracts/README.md) for the design, tests (unit, fuzz and invariant) and deploy commands.
+In short:
 
-**Advanced Features:**  
-The contract supports efficient array management, O(1) removal with index mappings, withdrawable balances for participants, and comprehensive tracking of user activity.
+```sh
+cd contracts
+forge test
+forge script script/Deploy.s.sol --rpc-url sepolia --account <keystore> --broadcast
+```
 
-**Fee Distribution System:**  
-- Platform Fee: 10% to contract owner  
-- Creator Royalty: 0–5% to the original creator  
-- Seller Payment: Remaining balance after fees  
+### Seeding a collection
 
----
+1. Put images in `NFT-SAMPLES/` and describe them in `scripts/seed/catalog.json` (name, description, and whether each
+   is for sale, in auction or kept, with a price or reserve).
+2. Upload them to IPFS: `node --env-file=.env scripts/seed/upload.mjs`. This writes
+   `contracts/script/seed-manifest.json`.
+3. Mint, list and auction everything:
+   `cd contracts && forge script script/Seed.s.sol --rpc-url sepolia --account <keystore> --broadcast --slow`
 
-## IPFS Integration via Pinata
+## Deploying
 
-**Location:** `pinataService.js`  
-**Purpose:** Provides IPFS integration for decentralized storage.  
-
-**Core Capabilities:** Authentication with JWT and API keys, multi-format image upload, structured JSON metadata storage, batch operations, and pin/unpin management.  
-
-**Upload Process:**  
-1. Validate image file (format, size)  
-2. Upload image to IPFS  
-3. Create metadata with IPFS reference  
-4. Upload metadata to IPFS  
-5. Return complete IPFS references  
-
-**Validation & Security:** Strict MIME type validation, 10MB max file size, robust error handling, and multiple IPFS gateway fallback.
-
----
-
-## Technical Components
-
-### HomePage Component
-**Location:** `HomePage.js`  
-A landing page that displays marketplace overview, trending NFTs, dynamic hero section with animations, real-time marketplace statistics, and onboarding features.  
-
-### Marketplace Component
-**Location:** `Marketplace.js`  
-Main interface for browsing and purchasing NFTs. Fetches active listings and auctions, provides real-time price and status updates, and includes search and filtering functionality.  
-
-### UserDashboard Component
-**Location:** `UserDashboard.js`  
-Personal NFT management interface. Displays created NFTs, purchased NFTs, marketplace listings, and withdrawable balances.  
-
-### NFT Provider Hook
-**Location:** `NFTProvider.js`  
-Core blockchain interaction abstraction. Supports minting NFTs, fetching metadata, listing NFTs, buying, canceling listings, creating auctions, placing bids, finalizing auctions, and canceling auctions.  
-
-**Data Retrieval:** Includes fetching active listings, active auctions, user-created NFTs, user-purchased NFTs, and withdrawable balances.  
-
----
-
-## Data Flow Architecture
-
-1. **NFT Creation:** User input → file validation → IPFS upload (image, metadata) → smart contract mint → marketplace registration → UI update  
-2. **Listing:** NFT selection → ownership verification → approval transaction → listing transaction → event emission → UI refresh  
-3. **Auction Creation:** NFT selection → validation → approval → auction transaction → array tracking → UI update  
-4. **Direct Purchase:** Buy request → validation → purchase transaction → fee distribution → transfer → UI update  
-5. **Auction Bidding:** Bid placement → validation → transaction → refund → event emission → UI update  
-
----
-
-## Security Implementation
-
-**Smart Contract Security:**  
-Reentrancy protection with `nonReentrant`, safe transfer patterns, state changes before external calls, owner-only functions, proper ownership verification, input validation, reserve price and bid increment protection, and automatic fee distribution.  
-
-**Frontend Security:**  
-Sanitization of user inputs, prevention of XSS, no sensitive data stored in `localStorage`, and error boundaries for graceful recovery.  
-
----
-
-## Performance Optimizations
-
-**Smart Contract:** O(1) array removal, struct packing for gas optimization, batch operations, indexed events.  
-**Frontend:** Optimized with `useMemo`, `useCallback`, lazy loading, caching, and virtual scrolling.  
-**IPFS:** Multiple gateway fallback, caching, batch uploads, and automatic retry mechanisms.  
-
----
-
-## Testing Strategy
-
-**Smart Contract Testing:** Unit tests, integration tests, security tests (reentrancy, overflow), and gas analysis.  
-**Frontend Testing:** Component tests, hook tests, integration tests, and performance/load testing.  
-**IPFS Testing:** File upload, retrieval, gateway fallback, and error handling tests.  
-
----
-
-## Deployment Architecture
-
-**Smart Contracts:** Supports mainnet/testnet, source code verification on Etherscan, upgradeable proxy patterns, and multi-sig integration.  
-**Frontend:** Deployed with static hosting, CDN optimization, multi-environment support, progressive web app (PWA) features, and performance monitoring.  
-
----
-
-## Future Enhancements
-
-**Smart Contracts:** Multi-chain support (Polygon, Arbitrum), batch minting and listing, offers system for unlisted NFTs, and collection management.  
-**Frontend:** User profiles, social features, advanced analytics, mobile apps, and WebSocket-based live updates.  
-**Technical Improvements:** Layer 2 scaling, GraphQL integration, AI-powered discovery, and cross-chain bridges.  
-
----
-
-## Conclusion
-This documentation provides a complete overview of the NFT Marketplace Platform, including frontend structure, smart contract implementation, IPFS integration, security mechanisms, performance optimizations, and future upgrade plans.
+The site is a static build (`npm run build` → `dist/`). `netlify.toml` is set up for Netlify: set
+`VITE_PINATA_JWT` in the site's environment variables, since it's embedded at build time.
